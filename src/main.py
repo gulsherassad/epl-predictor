@@ -1,9 +1,8 @@
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from src.api.routes import router
 
@@ -13,16 +12,15 @@ _BASE = Path(__file__).resolve().parent.parent
 _FRONTEND = _BASE / "frontend"
 
 app.mount("/static", StaticFiles(directory=str(_FRONTEND)), name="static")
-_templates = Jinja2Templates(directory=str(_FRONTEND))
 
 app.include_router(router)
 
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return _templates.TemplateResponse("index.html", {"request": request})
+async def home():
+    return (_FRONTEND / "index.html").read_text(encoding="utf-8")
 
 
 @app.get("/fixtures-page", response_class=HTMLResponse)
-async def fixtures_page(request: Request):
-    return _templates.TemplateResponse("fixtures.html", {"request": request})
+async def fixtures_page():
+    return (_FRONTEND / "fixtures.html").read_text(encoding="utf-8")
