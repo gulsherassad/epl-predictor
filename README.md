@@ -8,7 +8,7 @@ A football analytics application that forecasts Premier League match outcomes us
 
 ## Screenshot
 
-> Add a screenshot of the UI here — open the live demo, generate a prediction, and drop the image in.
+![EPL Predictor UI](docs/screenshot.png)
 
 ---
 
