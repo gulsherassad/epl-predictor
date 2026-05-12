@@ -1,0 +1,139 @@
+{
+  "meta": {
+    "metric": "goals",
+    "base_home_xg": 1.6151,
+    "base_away_xg": 1.3559
+  },
+  "teams": {
+    "Arsenal": {
+      "attack": 1.35,
+      "defence": 1.35,
+      "matches": 152
+    },
+    "Aston Villa": {
+      "attack": 1.0496,
+      "defence": 1.0651,
+      "matches": 152
+    },
+    "Bournemouth": {
+      "attack": 0.8798,
+      "defence": 0.9204,
+      "matches": 114
+    },
+    "Brentford": {
+      "attack": 1.0097,
+      "defence": 1.008,
+      "matches": 152
+    },
+    "Brighton & Hove Albion": {
+      "attack": 1.0407,
+      "defence": 1.0358,
+      "matches": 152
+    },
+    "Burnley": {
+      "attack": 0.75,
+      "defence": 0.8618,
+      "matches": 76
+    },
+    "Chelsea": {
+      "attack": 1.1293,
+      "defence": 1.214,
+      "matches": 152
+    },
+    "Crystal Palace": {
+      "attack": 0.8769,
+      "defence": 1.1069,
+      "matches": 152
+    },
+    "Everton": {
+      "attack": 0.75,
+      "defence": 1.0358,
+      "matches": 152
+    },
+    "Fulham": {
+      "attack": 0.9684,
+      "defence": 1.008,
+      "matches": 114
+    },
+    "Ipswich Town": {
+      "attack": 0.75,
+      "defence": 0.75,
+      "matches": 38
+    },
+    "Leeds United": {
+      "attack": 0.7972,
+      "defence": 0.75,
+      "matches": 76
+    },
+    "Leicester City": {
+      "attack": 0.8621,
+      "defence": 0.8181,
+      "matches": 114
+    },
+    "Liverpool": {
+      "attack": 1.35,
+      "defence": 1.35,
+      "matches": 152
+    },
+    "Luton Town": {
+      "attack": 0.9212,
+      "defence": 0.75,
+      "matches": 38
+    },
+    "Manchester City": {
+      "attack": 1.35,
+      "defence": 1.35,
+      "matches": 152
+    },
+    "Manchester United": {
+      "attack": 0.9566,
+      "defence": 1.0651,
+      "matches": 152
+    },
+    "Newcastle United": {
+      "attack": 1.1736,
+      "defence": 1.1069,
+      "matches": 152
+    },
+    "Norwich City": {
+      "attack": 0.75,
+      "defence": 0.75,
+      "matches": 38
+    },
+    "Nottingham Forest": {
+      "attack": 0.8562,
+      "defence": 0.9356,
+      "matches": 114
+    },
+    "Sheffield United": {
+      "attack": 0.75,
+      "defence": 0.75,
+      "matches": 38
+    },
+    "Southampton": {
+      "attack": 0.75,
+      "defence": 0.75,
+      "matches": 114
+    },
+    "Tottenham Hotspur": {
+      "attack": 1.2267,
+      "defence": 0.986,
+      "matches": 152
+    },
+    "Watford": {
+      "attack": 0.75,
+      "defence": 0.75,
+      "matches": 38
+    },
+    "West Ham United": {
+      "attack": 0.9212,
+      "defence": 0.9331,
+      "matches": 152
+    },
+    "Wolverhampton Wanderers": {
+      "attack": 0.7662,
+      "defence": 0.9609,
+      "matches": 152
+    }
+  }
+}

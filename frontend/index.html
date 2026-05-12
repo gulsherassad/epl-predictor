@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EPL Predictor</title>
+  <link rel="stylesheet" href="/static/styles.css?v=3">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-logo">PL</span>
+        <div>
+          <h1>Premier League Predictor</h1>
+          <p>Match Centre</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div class="hero-text">
+        <p class="eyebrow">Fixtures and predictions</p>
+        <h2>Preview any Premier League match</h2>
+        <p class="subtext">
+          Choose two teams and generate win probabilities, xG, and likely scorelines.
+        </p>
+        <p>
+          <a href="/fixtures-page" class="secondary-btn">View upcoming fixtures</a>
+        </p>
+      </div>
+    </section>
+
+    <section class="controls-card">
+      <div class="control-group">
+        <label for="homeTeam">Home team</label>
+        <select id="homeTeam">
+          <option value="">Select home team</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="awayTeam">Away team</label>
+        <select id="awayTeam">
+          <option value="">Select away team</option>
+        </select>
+      </div>
+
+      <div class="control-group button-wrap">
+        <button id="predictBtn">Generate prediction</button>
+      </div>
+    </section>
+
+    <p id="errorMessage" class="error-message"></p>
+
+    <section class="match-card">
+      <div class="match-card-top">
+        <span class="status-pill" id="matchStatus">Prediction</span>
+        <span class="matchweek-label">Match Preview</span>
+      </div>
+
+      <div class="match-main">
+        <div class="team-side">
+          <div class="team-badge">
+            <img id="homeTeamBadge" src="/static/badges/placeholder.png" alt="Home team badge">
+          </div>
+          <h3 id="homeTeamName">Home Team</h3>
+          <p class="team-role">Home</p>
+        </div>
+
+        <div class="match-center">
+          <p class="kickoff-label">Expected result profile</p>
+          <div class="score-display">
+            <span id="homeProb">—</span>
+            <span class="vs">vs</span>
+            <span id="awayProb">—</span>
+          </div>
+          <p class="draw-line">Draw: <span id="drawProb">—</span></p>
+          <div class="prob-bars">
+            <div class="prob-bar">
+              <div class="prob-bar-home" id="barHome"></div>
+              <div class="prob-bar-draw" id="barDraw"></div>
+              <div class="prob-bar-away" id="barAway"></div>
+            </div>
+            <div class="prob-bar-labels">
+              <span>Home win</span>
+              <span>Draw</span>
+              <span>Away win</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="team-side">
+          <div class="team-badge">
+            <img id="awayTeamBadge" src="/static/badges/placeholder.png" alt="Away team badge">
+          </div>
+          <h3 id="awayTeamName">Away Team</h3>
+          <p class="team-role">Away</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats-grid">
+      <div class="stat-card">
+        <p class="stat-label">Home xG</p>
+        <p class="stat-value" id="xgHome">0.00</p>
+      </div>
+
+      <div class="stat-card">
+        <p class="stat-label">Away xG</p>
+        <p class="stat-value" id="xgAway">0.00</p>
+      </div>
+
+      <div class="stat-card wide-card">
+        <p class="stat-label">Most likely scorelines</p>
+        <ul id="scorelinesList" class="scorelines-list">
+          <li>No prediction yet</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="model-perf-card">
+      <div class="model-perf-header">
+        <h3>Model performance</h3>
+        <span class="model-perf-subtitle">Combined Elo + Poisson &middot; <span id="perfMatches">—</span> backtested matches</span>
+      </div>
+      <div class="model-perf-grid">
+        <div class="perf-stat">
+          <p class="perf-value" id="perfAccuracy">—</p>
+          <p class="perf-label">1X2 Accuracy</p>
+        </div>
+        <div class="perf-stat">
+          <p class="perf-value" id="perfBrier">—</p>
+          <p class="perf-label">Brier Score</p>
+        </div>
+        <div class="perf-stat">
+          <p class="perf-value" id="perfLogLoss">—</p>
+          <p class="perf-label">Log Loss</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="recent-card">
+      <div class="recent-header">
+        <h3>Recent predictions</h3>
+        <button id="clearRecentBtn" class="secondary-btn" type="button">Clear</button>
+      </div>
+
+      <div id="recentPredictions" class="recent-predictions">
+        <p class="empty-recent">No predictions yet.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js?v=3"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+jinja2
+httpx
+pandas
+numpy
+scikit-learn
+pyarrow
+pytest
+python-dateutil
