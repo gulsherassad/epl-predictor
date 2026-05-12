@@ -2,11 +2,13 @@
 
 A football analytics application that forecasts Premier League match outcomes using a combined Elo rating system and Poisson goals model, served through a FastAPI backend with a live prediction UI.
 
+**Live demo: [epl-predictor-xmqs.onrender.com](https://epl-predictor-xmqs.onrender.com)**
+
 ---
 
 ## Screenshot
 
-> Add a screenshot of the UI here — run the server, generate a prediction, and drop the image in.
+> Add a screenshot of the UI here — open the live demo, generate a prediction, and drop the image in.
 
 ---
 
@@ -152,7 +154,7 @@ pytest tests/ -v
 **Example — predict Arsenal vs Chelsea:**
 
 ```bash
-curl "http://localhost:8000/predict?home=Arsenal&away=Chelsea"
+curl "https://epl-predictor-xmqs.onrender.com/predict?home=Arsenal&away=Chelsea"
 ```
 
 ```json
