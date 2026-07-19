@@ -1,18 +1,26 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
+from src import analytics
 from src.api.routes import router
 
-app = FastAPI(title="EPL Predictor", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    analytics.init()
+    yield
+
+
+app = FastAPI(title="EPL Predictor", version="1.0.0", lifespan=lifespan)
 
 _BASE = Path(__file__).resolve().parent.parent
 _FRONTEND = _BASE / "frontend"
 
 app.mount("/static", StaticFiles(directory=str(_FRONTEND)), name="static")
-
 app.include_router(router)
 
 
