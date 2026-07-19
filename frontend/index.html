@@ -4,7 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EPL Predictor</title>
-  <link rel="stylesheet" href="/static/styles.css?v=3">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css?v=4">
 </head>
 <body>
   <header class="topbar">
@@ -16,6 +19,9 @@
           <p>Match Centre</p>
         </div>
       </div>
+      <nav class="topbar-nav">
+        <a href="/fixtures-page" class="nav-link">Fixtures</a>
+      </nav>
     </div>
   </header>
 
@@ -23,12 +29,9 @@
     <section class="hero">
       <div class="hero-text">
         <p class="eyebrow">Fixtures and predictions</p>
-        <h2>Preview any Premier League match</h2>
+        <h2>Who wins the match?</h2>
         <p class="subtext">
-          Choose two teams and generate win probabilities, xG, and likely scorelines.
-        </p>
-        <p>
-          <a href="/fixtures-page" class="secondary-btn">View upcoming fixtures</a>
+          Pick any Premier League fixture to get win probabilities, expected goals, and most likely scorelines — powered by a combined Elo + Poisson model.
         </p>
       </div>
     </section>
@@ -41,6 +44,8 @@
         </select>
       </div>
 
+      <div class="controls-vs">VS</div>
+
       <div class="control-group">
         <label for="awayTeam">Away team</label>
         <select id="awayTeam">
@@ -49,7 +54,10 @@
       </div>
 
       <div class="control-group button-wrap">
-        <button id="predictBtn">Generate prediction</button>
+        <button id="predictBtn">
+          <span class="btn-text">Generate prediction</span>
+          <span class="btn-spinner" aria-hidden="true"></span>
+        </button>
       </div>
     </section>
 
@@ -68,16 +76,24 @@
           </div>
           <h3 id="homeTeamName">Home Team</h3>
           <p class="team-role">Home</p>
+          <p class="team-elo" id="homeElo"></p>
         </div>
 
         <div class="match-center">
-          <p class="kickoff-label">Expected result profile</p>
-          <div class="score-display">
-            <span id="homeProb">—</span>
-            <span class="vs">vs</span>
-            <span id="awayProb">—</span>
+          <div class="prob-boxes">
+            <div class="prob-box prob-box-home">
+              <span class="prob-box-value" id="homeProb">—</span>
+              <span class="prob-box-label">Home win</span>
+            </div>
+            <div class="prob-box prob-box-draw">
+              <span class="prob-box-value" id="drawProb">—</span>
+              <span class="prob-box-label">Draw</span>
+            </div>
+            <div class="prob-box prob-box-away">
+              <span class="prob-box-value" id="awayProb">—</span>
+              <span class="prob-box-label">Away win</span>
+            </div>
           </div>
-          <p class="draw-line">Draw: <span id="drawProb">—</span></p>
           <div class="prob-bars">
             <div class="prob-bar">
               <div class="prob-bar-home" id="barHome"></div>
@@ -85,9 +101,9 @@
               <div class="prob-bar-away" id="barAway"></div>
             </div>
             <div class="prob-bar-labels">
-              <span>Home win</span>
+              <span>Home</span>
               <span>Draw</span>
-              <span>Away win</span>
+              <span>Away</span>
             </div>
           </div>
         </div>
@@ -98,28 +114,37 @@
           </div>
           <h3 id="awayTeamName">Away Team</h3>
           <p class="team-role">Away</p>
+          <p class="team-elo" id="awayElo"></p>
         </div>
       </div>
     </section>
 
-    <section class="stats-grid">
-      <div class="stat-card">
-        <p class="stat-label">Home xG</p>
-        <p class="stat-value" id="xgHome">0.00</p>
+    <div class="stats-row">
+      <div class="stat-card xg-card">
+        <p class="stat-label">Expected Goals (xG)</p>
+        <div class="xg-row">
+          <div class="xg-figure">
+            <span class="xg-num" id="xgHome">—</span>
+            <span class="xg-lab">Home</span>
+          </div>
+          <div class="xg-track">
+            <div class="xg-fill-home" id="xgBarHome"></div>
+            <div class="xg-fill-away" id="xgBarAway"></div>
+          </div>
+          <div class="xg-figure xg-figure-right">
+            <span class="xg-num" id="xgAway">—</span>
+            <span class="xg-lab">Away</span>
+          </div>
+        </div>
       </div>
 
-      <div class="stat-card">
-        <p class="stat-label">Away xG</p>
-        <p class="stat-value" id="xgAway">0.00</p>
-      </div>
-
-      <div class="stat-card wide-card">
+      <div class="stat-card scorelines-card">
         <p class="stat-label">Most likely scorelines</p>
-        <ul id="scorelinesList" class="scorelines-list">
-          <li>No prediction yet</li>
-        </ul>
+        <div id="scorelinesPills" class="scorelines-pills">
+          <span class="scoreline-empty">No prediction yet</span>
+        </div>
       </div>
-    </section>
+    </div>
 
     <section class="model-perf-card">
       <div class="model-perf-header">
@@ -147,13 +172,12 @@
         <h3>Recent predictions</h3>
         <button id="clearRecentBtn" class="secondary-btn" type="button">Clear</button>
       </div>
-
       <div id="recentPredictions" class="recent-predictions">
         <p class="empty-recent">No predictions yet.</p>
       </div>
     </section>
   </main>
 
-  <script src="/static/app.js?v=3"></script>
+  <script src="/static/app.js?v=4"></script>
 </body>
 </html>

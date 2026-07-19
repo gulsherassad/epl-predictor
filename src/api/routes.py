@@ -1,8 +1,12 @@
 import json
+import os
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
+import httpx
 import pandas as pd
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Query, Request
 
 from src import analytics
 from src.api.schemas import (
@@ -17,6 +21,47 @@ from src.models.elo import predict_proba, update_ratings
 from src.models.poisson import PoissonGoalsModel
 
 router = APIRouter()
+
+# ── Fixtures config ──────────────────────────────────────────────────────────
+_FIXTURES_CACHE: dict = {"data": None, "expires": 0.0}
+
+# Maps football-data.org shortName / name variants → model team names
+_FD_TEAM_MAP = {
+    "Arsenal": "Arsenal",
+    "Aston Villa": "Aston Villa",
+    "Bournemouth": "Bournemouth",
+    "Brentford": "Brentford",
+    "Brighton": "Brighton",
+    "Chelsea": "Chelsea",
+    "Crystal Palace": "Crystal Palace",
+    "Everton": "Everton",
+    "Fulham": "Fulham",
+    "Ipswich Town": "Ipswich Town",
+    "Leeds United": "Leeds United",
+    "Leicester City": "Leicester City",
+    "Liverpool": "Liverpool",
+    "Man City": "Manchester City",
+    "Man Utd": "Manchester United",
+    "Manchester City": "Manchester City",
+    "Manchester United": "Manchester United",
+    "Newcastle": "Newcastle United",
+    "Newcastle United": "Newcastle United",
+    "Nott'm Forest": "Nottingham Forest",
+    "Nottingham Forest": "Nottingham Forest",
+    "Sheffield Utd": "Sheffield United",
+    "Sheffield United": "Sheffield United",
+    "Southampton": "Southampton",
+    "Spurs": "Tottenham",
+    "Tottenham Hotspur": "Tottenham",
+    "West Ham": "West Ham United",
+    "West Ham United": "West Ham United",
+    "Wolves": "Wolves",
+    "Wolverhampton Wanderers": "Wolves",
+    "Middlesbrough": "Middlesbrough",
+    "Sunderland": "Sunderland",
+    "Burnley": "Burnley",
+    "Luton Town": "Luton Town",
+}
 
 START_RATING = 1500.0
 K = 40.0
@@ -136,6 +181,7 @@ def get_state() -> dict:
         seasons = sorted({season_label(d) for d in df["Date"]})
 
         get_state._cache = {
+            "df": df,
             "teams": teams,
             "ratings": ratings,
             "pred_rows": pred_rows,
@@ -276,6 +322,184 @@ def model_config():
         "seasons": state["seasons"],
         "matches_in_dataset": state["match_count"],
         "matches_backtested": len(pred_rows) if pred_rows else None,
+    }
+
+
+@router.post("/refresh")
+def refresh_data(x_refresh_token: str | None = Header(None)):
+    """Fetch the current season's results, rebuild matches.parquet, clear model cache."""
+    expected = os.environ.get("REFRESH_SECRET")
+    if expected and x_refresh_token != expected:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Refresh-Token header")
+
+    from src.data.updater import current_season, fetch_season_csv, rebuild_parquet
+
+    season = current_season()
+    try:
+        _, matches_fetched = fetch_season_csv(season)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not fetch season data: {e}")
+
+    total_rows, data_through = rebuild_parquet()
+
+    if hasattr(get_state, "_cache"):
+        del get_state._cache
+
+    return {
+        "status": "ok",
+        "season_updated": f"{season}/{season + 1}",
+        "matches_fetched": matches_fetched,
+        "total_matches": total_rows,
+        "data_through": data_through,
+    }
+
+
+@router.get("/fixtures")
+def fixtures():
+    api_key = os.environ.get("FOOTBALL_DATA_API_KEY", "")
+    if not api_key:
+        return {
+            "fixtures": [],
+            "message": "Set the FOOTBALL_DATA_API_KEY environment variable to load fixtures.",
+        }
+
+    now = time.time()
+
+    # Fixtures are always for the upcoming/in-progress season (current calendar year)
+    season = datetime.now(timezone.utc).year
+
+    if (
+        _FIXTURES_CACHE["data"] is not None
+        and _FIXTURES_CACHE["expires"] > now
+        and _FIXTURES_CACHE.get("season") == season
+    ):
+        return _FIXTURES_CACHE["data"]
+
+    url = "https://api.football-data.org/v4/competitions/PL/matches"
+    params = {"season": season, "status": "SCHEDULED"}
+    headers = {"X-Auth-Token": api_key}
+
+    try:
+        with httpx.Client(timeout=10) as client:
+            resp = client.get(url, params=params, headers=headers)
+            resp.raise_for_status()
+            raw = resp.json()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=502, detail=f"football-data.org error: {e.response.status_code}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not fetch fixtures: {e}")
+
+    result_fixtures = []
+    for match in raw.get("matches", []):
+        home_short = match["homeTeam"].get("shortName") or match["homeTeam"]["name"]
+        away_short = match["awayTeam"].get("shortName") or match["awayTeam"]["name"]
+
+        home = _FD_TEAM_MAP.get(home_short, home_short)
+        away = _FD_TEAM_MAP.get(away_short, away_short)
+
+        utc_str = match["utcDate"]
+        dt = datetime.fromisoformat(utc_str.replace("Z", "+00:00"))
+
+        result_fixtures.append({
+            "matchday": match.get("matchday", 0),
+            "date": dt.strftime("%a %d %b %Y"),
+            "time": dt.strftime("%H:%M") + " UTC",
+            "utc_date": utc_str,
+            "home_team": home,
+            "away_team": away,
+        })
+
+    result = {"fixtures": result_fixtures}
+    _FIXTURES_CACHE["data"] = result
+    _FIXTURES_CACHE["expires"] = now + 3600.0
+    _FIXTURES_CACHE["season"] = season
+    return result
+
+
+@router.get("/form")
+def team_form(team: str = Query(...), n: int = Query(5, ge=1, le=10)):
+    state = get_state()
+    if team not in state["teams"]:
+        raise HTTPException(status_code=400, detail=f"Unknown team: {team}")
+
+    df: pd.DataFrame = state["df"]
+    mask = (df["HomeTeam"] == team) | (df["AwayTeam"] == team)
+    recent = df[mask].sort_values("Date").tail(n)
+
+    form = []
+    matches_out = []
+    for _, row in recent.iterrows():
+        is_home = row["HomeTeam"] == team
+        gf = int(row["FTHG"]) if is_home else int(row["FTAG"])
+        ga = int(row["FTAG"]) if is_home else int(row["FTHG"])
+        result = "W" if gf > ga else ("L" if gf < ga else "D")
+        form.append(result)
+        matches_out.append({
+            "date": row["Date"].strftime("%d %b %Y"),
+            "home": row["HomeTeam"],
+            "away": row["AwayTeam"],
+            "home_goals": int(row["FTHG"]),
+            "away_goals": int(row["FTAG"]),
+            "result": result,
+        })
+
+    return {"team": team, "form": form, "matches": matches_out}
+
+
+@router.get("/h2h")
+def head_to_head(
+    home: str = Query(...),
+    away: str = Query(...),
+    n: int = Query(10, ge=1, le=20),
+):
+    state = get_state()
+    home, away = validate_teams(home, away, state["teams"])
+
+    df: pd.DataFrame = state["df"]
+    mask = (
+        ((df["HomeTeam"] == home) & (df["AwayTeam"] == away))
+        | ((df["HomeTeam"] == away) & (df["AwayTeam"] == home))
+    )
+    h2h = df[mask].sort_values("Date").tail(n)
+
+    home_wins = draws = away_wins = 0
+    matches_out = []
+
+    for _, row in h2h.iterrows():
+        hg, ag = int(row["FTHG"]), int(row["FTAG"])
+        h_team = row["HomeTeam"]
+        a_team = row["AwayTeam"]
+
+        if hg > ag:
+            winner = h_team
+        elif ag > hg:
+            winner = a_team
+        else:
+            winner = None
+
+        if winner == home:
+            home_wins += 1
+        elif winner == away:
+            away_wins += 1
+        else:
+            draws += 1
+
+        matches_out.append({
+            "date": row["Date"].strftime("%d %b %Y"),
+            "home": h_team,
+            "away": a_team,
+            "home_goals": hg,
+            "away_goals": ag,
+        })
+
+    return {
+        "home": home,
+        "away": away,
+        "home_wins": home_wins,
+        "draws": draws,
+        "away_wins": away_wins,
+        "total": len(matches_out),
+        "matches": list(reversed(matches_out)),
     }
 
 

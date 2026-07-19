@@ -11,7 +11,9 @@ const awayProb = document.getElementById("awayProb");
 
 const xgHome = document.getElementById("xgHome");
 const xgAway = document.getElementById("xgAway");
-const scorelinesList = document.getElementById("scorelinesList");
+const xgBarHome = document.getElementById("xgBarHome");
+const xgBarAway = document.getElementById("xgBarAway");
+const scorelinesPills = document.getElementById("scorelinesPills");
 
 const homeTeamName = document.getElementById("homeTeamName");
 const awayTeamName = document.getElementById("awayTeamName");
@@ -21,6 +23,8 @@ const clearRecentBtn = document.getElementById("clearRecentBtn");
 
 const homeTeamBadge = document.getElementById("homeTeamBadge");
 const awayTeamBadge = document.getElementById("awayTeamBadge");
+const homeEloEl = document.getElementById("homeElo");
+const awayEloEl = document.getElementById("awayElo");
 
 const barHome = document.getElementById("barHome");
 const barDraw = document.getElementById("barDraw");
@@ -66,20 +70,34 @@ const TEAM_BADGES = {
   "Wolverhampton Wanderers": "/static/badges/wolves.png"
 };
 
+function animateValue(element, from, to, duration, formatter) {
+  const startTime = performance.now();
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    element.textContent = formatter(from + (to - from) * eased);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function setLoading(loading) {
+  predictBtn.classList.toggle("loading", loading);
+  predictBtn.disabled = loading;
+}
+
 function applyFixtureFromQuery() {
   const params = new URLSearchParams(window.location.search);
   const home = params.get("home");
   const away = params.get("away");
 
-  if (!home || !away) {
-    return;
-  }
+  if (!home || !away) return;
 
-  if ([...homeTeamSelect.options].some((option) => option.value === home)) {
+  if ([...homeTeamSelect.options].some((o) => o.value === home)) {
     homeTeamSelect.value = home;
   }
-
-  if ([...awayTeamSelect.options].some((option) => option.value === away)) {
+  if ([...awayTeamSelect.options].some((o) => o.value === away)) {
     awayTeamSelect.value = away;
   }
 
@@ -89,21 +107,10 @@ function applyFixtureFromQuery() {
 async function loadTeams() {
   try {
     errorMessage.textContent = "";
-
     const response = await fetch("/teams");
-    console.log("teams status:", response.status);
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    console.log("teams data:", data);
-    console.log("backend team names:", data.teams);
-
-    if (!data.teams || !Array.isArray(data.teams)) {
-      throw new Error("teams array missing");
-    }
+    if (!data.teams || !Array.isArray(data.teams)) throw new Error("teams array missing");
 
     homeTeamSelect.innerHTML = '<option value="">Select home team</option>';
     awayTeamSelect.innerHTML = '<option value="">Select away team</option>';
@@ -122,10 +129,7 @@ async function loadTeams() {
     });
 
     applyFixtureFromQuery();
-
-    console.log("teams loaded successfully");
   } catch (error) {
-    console.error("loadTeams error:", error);
     errorMessage.textContent = `Could not load teams: ${error.message}`;
   }
 }
@@ -139,7 +143,6 @@ function setBadge(imgElement, teamName) {
     imgElement.onerror = null;
     imgElement.src = "/static/badges/placeholder.png";
   };
-
   imgElement.src = getBadgePath(teamName);
   imgElement.alt = `${teamName || "Team"} badge`;
 }
@@ -147,10 +150,8 @@ function setBadge(imgElement, teamName) {
 function updateTeamNames() {
   const homeTeam = homeTeamSelect.value || "Home Team";
   const awayTeam = awayTeamSelect.value || "Away Team";
-
   homeTeamName.textContent = homeTeam;
   awayTeamName.textContent = awayTeam;
-
   setBadge(homeTeamBadge, homeTeamSelect.value);
   setBadge(awayTeamBadge, awayTeamSelect.value);
 }
@@ -189,31 +190,28 @@ function renderRecentPredictions() {
     card.className = "recent-item";
 
     const scorelinesText = item.topScorelines
-      .map((score) => `${score.home_goals}-${score.away_goals} (${(score.prob * 100).toFixed(1)}%)`)
+      .map((s) => `${s.home_goals}–${s.away_goals} (${(s.prob * 100).toFixed(1)}%)`)
       .join(", ");
 
     card.innerHTML = `
       <div class="recent-item-top">
         <p class="recent-fixture">
-          <img class="recent-badge" src="${getBadgePath(item.homeTeam)}" alt="${item.homeTeam} badge">
+          <img class="recent-badge" src="${getBadgePath(item.homeTeam)}" alt="${item.homeTeam}">
           ${item.homeTeam} vs
-          <img class="recent-badge" src="${getBadgePath(item.awayTeam)}" alt="${item.awayTeam} badge">
+          <img class="recent-badge" src="${getBadgePath(item.awayTeam)}" alt="${item.awayTeam}">
           ${item.awayTeam}
         </p>
         <span class="recent-time">${formatTime(item.createdAt)}</span>
       </div>
-
       <div class="recent-row">
-        <span>Home: ${item.homeProb}%</span>
-        <span>Draw: ${item.drawProb}%</span>
-        <span>Away: ${item.awayProb}%</span>
+        <span>Home: <strong>${item.homeProb}%</strong></span>
+        <span>Draw: <strong>${item.drawProb}%</strong></span>
+        <span>Away: <strong>${item.awayProb}%</strong></span>
       </div>
-
       <div class="recent-row">
-        <span>Home xG: ${item.homeXg}</span>
-        <span>Away xG: ${item.awayXg}</span>
+        <span>Home xG: <strong>${item.homeXg}</strong></span>
+        <span>Away xG: <strong>${item.awayXg}</strong></span>
       </div>
-
       <div class="recent-scorelines">
         <strong>Top scorelines:</strong> ${scorelinesText}
       </div>
@@ -238,8 +236,7 @@ function addRecentPrediction(data, homeTeam, awayTeam) {
     createdAt: Date.now()
   });
 
-  const trimmed = items.slice(0, 5);
-  saveRecentPredictions(trimmed);
+  saveRecentPredictions(items.slice(0, 5));
   renderRecentPredictions();
 }
 
@@ -265,47 +262,65 @@ predictBtn.addEventListener("click", async () => {
   }
 
   updateTeamNames();
-  matchStatus.textContent = "Loading...";
+  matchStatus.textContent = "Loading…";
+  setLoading(true);
 
   try {
     const params = new URLSearchParams({ home: homeTeam, away: awayTeam });
     const response = await fetch(`${API_BASE}/predict?${params}`);
-
-    if (!response.ok) {
-      throw new Error("Prediction failed");
-    }
-
+    if (!response.ok) throw new Error("Prediction failed");
     const data = await response.json();
 
-    homeProb.textContent = `${(data.p_home * 100).toFixed(1)}%`;
-    drawProb.textContent = `${(data.p_draw * 100).toFixed(1)}%`;
-    awayProb.textContent = `${(data.p_away * 100).toFixed(1)}%`;
+    // Probability boxes with count-up
+    const ANIM = 550;
+    animateValue(homeProb, 0, data.p_home * 100, ANIM, v => `${v.toFixed(1)}%`);
+    animateValue(drawProb, 0, data.p_draw * 100, ANIM, v => `${v.toFixed(1)}%`);
+    animateValue(awayProb, 0, data.p_away * 100, ANIM, v => `${v.toFixed(1)}%`);
 
-    barHome.style.width = `${(data.p_home * 100).toFixed(1)}%`;
-    barDraw.style.width = `${(data.p_draw * 100).toFixed(1)}%`;
-    barAway.style.width = `${(data.p_away * 100).toFixed(1)}%`;
+    // Probability bars
+    requestAnimationFrame(() => {
+      barHome.style.width = `${(data.p_home * 100).toFixed(1)}%`;
+      barDraw.style.width = `${(data.p_draw * 100).toFixed(1)}%`;
+      barAway.style.width = `${(data.p_away * 100).toFixed(1)}%`;
+    });
 
-    xgHome.textContent = Number(data.xg_home).toFixed(2);
-    xgAway.textContent = Number(data.xg_away).toFixed(2);
+    // xG with count-up and bars
+    animateValue(xgHome, 0, data.xg_home, ANIM, v => v.toFixed(2));
+    animateValue(xgAway, 0, data.xg_away, ANIM, v => v.toFixed(2));
 
-    scorelinesList.innerHTML = "";
+    const totalXg = data.xg_home + data.xg_away;
+    const homeRatio = totalXg > 0 ? (data.xg_home / totalXg) * 100 : 50;
+    requestAnimationFrame(() => {
+      xgBarHome.style.width = `${homeRatio.toFixed(1)}%`;
+    });
 
+    // Elo ratings
+    if (data.r_home) homeEloEl.textContent = `Elo ${Math.round(data.r_home)}`;
+    if (data.r_away) awayEloEl.textContent = `Elo ${Math.round(data.r_away)}`;
+
+    // Scoreline pills
+    scorelinesPills.innerHTML = "";
     if (data.top_scorelines && data.top_scorelines.length > 0) {
       data.top_scorelines.forEach((item) => {
-        const li = document.createElement("li");
-        li.textContent = `${item.home_goals}-${item.away_goals} (${(item.prob * 100).toFixed(1)}%)`;
-        scorelinesList.appendChild(li);
+        const pill = document.createElement("div");
+        pill.className = "scoreline-pill";
+        pill.innerHTML = `
+          <span class="scoreline-score">${item.home_goals}–${item.away_goals}</span>
+          <span class="scoreline-prob">${(item.prob * 100).toFixed(1)}%</span>
+        `;
+        scorelinesPills.appendChild(pill);
       });
     } else {
-      scorelinesList.innerHTML = "<li>No scorelines returned</li>";
+      scorelinesPills.innerHTML = '<span class="scoreline-empty">No scorelines returned</span>';
     }
 
     addRecentPrediction(data, homeTeam, awayTeam);
-
     matchStatus.textContent = "Prediction ready";
   } catch (error) {
     matchStatus.textContent = "Prediction";
     errorMessage.textContent = "Could not generate prediction.";
+  } finally {
+    setLoading(false);
   }
 });
 
@@ -319,7 +334,7 @@ async function loadModelPerf() {
     document.getElementById("perfLogLoss").textContent = data.log_loss.toFixed(3);
     document.getElementById("perfMatches").textContent = data.matches.toLocaleString();
   } catch {
-    // non-critical — leave dashes in place
+    // non-critical — leave dashes
   }
 }
 
