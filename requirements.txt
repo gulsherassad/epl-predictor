@@ -8,3 +8,4 @@ scikit-learn
 pyarrow
 pytest
 python-dateutil
+psycopg[binary]>=3.1
