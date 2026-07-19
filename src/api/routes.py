@@ -239,7 +239,9 @@ def predict(
     away: str = Query(...),
 ):
     state = get_state()
-    home, away = validate_teams(home, away, state["teams"])
+    home, away = home.strip(), away.strip()
+    if home == away:
+        raise HTTPException(status_code=400, detail="home and away must be different teams")
 
     cache_key = (home, away)
     if cache_key in _PREDICT_CACHE:
