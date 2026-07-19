@@ -77,6 +77,7 @@
           <h3 id="homeTeamName">Home Team</h3>
           <p class="team-role">Home</p>
           <p class="team-elo" id="homeElo"></p>
+          <div class="team-form" id="homeForm"></div>
         </div>
 
         <div class="match-center">
@@ -115,7 +116,22 @@
           <h3 id="awayTeamName">Away Team</h3>
           <p class="team-role">Away</p>
           <p class="team-elo" id="awayElo"></p>
+          <div class="team-form" id="awayForm"></div>
         </div>
+      </div>
+
+      <div class="h2h-section" id="h2hSection" style="display:none">
+        <p class="h2h-title" id="h2hTitle">Last 10 head-to-head</p>
+        <div class="h2h-row">
+          <span class="h2h-count h2h-count-home" id="h2hHomeCount">—</span>
+          <div class="h2h-bar-track">
+            <div class="h2h-fill-home" id="h2hFillHome"></div>
+            <div class="h2h-fill-draw" id="h2hFillDraw"></div>
+            <div class="h2h-fill-away" id="h2hFillAway"></div>
+          </div>
+          <span class="h2h-count h2h-count-away" id="h2hAwayCount">—</span>
+        </div>
+        <p class="h2h-sub" id="h2hSub"></p>
       </div>
     </section>
 

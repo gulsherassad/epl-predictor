@@ -1,6 +1,10 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 
+import pandas as pd
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,10 +12,44 @@ from fastapi.staticfiles import StaticFiles
 from src import analytics
 from src.api.routes import router
 
+logger = logging.getLogger(__name__)
+
+_DATA_STALE_DAYS = 7
+
+
+async def _auto_refresh() -> None:
+    """Background task: fetch latest season results and reload the model state."""
+    from src.data.updater import current_season, fetch_season_csv, rebuild_parquet
+    from src.api.routes import get_state
+
+    loop = asyncio.get_event_loop()
+    try:
+        season = current_season()
+        logger.info("Auto-refresh: fetching season %s/%s …", season, season + 1)
+        await loop.run_in_executor(None, fetch_season_csv, season)
+        await loop.run_in_executor(None, rebuild_parquet)
+        if hasattr(get_state, "_cache"):
+            del get_state._cache
+        logger.info("Auto-refresh complete.")
+    except Exception as exc:
+        logger.warning("Auto-refresh failed: %s", exc)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     analytics.init()
+
+    # On startup, trigger a background data refresh if training data is stale
+    parquet = Path(__file__).resolve().parents[1] / "data" / "processed" / "matches.parquet"
+    if parquet.exists():
+        df = pd.read_parquet(parquet, columns=["Date"])
+        latest = pd.to_datetime(df["Date"]).max()
+        latest_utc = latest.to_pydatetime().replace(tzinfo=timezone.utc)
+        age_days = (datetime.now(timezone.utc) - latest_utc).days
+        if age_days >= _DATA_STALE_DAYS:
+            logger.info("Training data is %d days old — scheduling background refresh.", age_days)
+            asyncio.create_task(_auto_refresh())
+
     yield
 
 

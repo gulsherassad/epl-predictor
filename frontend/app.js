@@ -25,6 +25,16 @@ const homeTeamBadge = document.getElementById("homeTeamBadge");
 const awayTeamBadge = document.getElementById("awayTeamBadge");
 const homeEloEl = document.getElementById("homeElo");
 const awayEloEl = document.getElementById("awayElo");
+const homeFormEl = document.getElementById("homeForm");
+const awayFormEl = document.getElementById("awayForm");
+const h2hSection = document.getElementById("h2hSection");
+const h2hTitle = document.getElementById("h2hTitle");
+const h2hHomeCount = document.getElementById("h2hHomeCount");
+const h2hAwayCount = document.getElementById("h2hAwayCount");
+const h2hFillHome = document.getElementById("h2hFillHome");
+const h2hFillDraw = document.getElementById("h2hFillDraw");
+const h2hFillAway = document.getElementById("h2hFillAway");
+const h2hSub = document.getElementById("h2hSub");
 
 const barHome = document.getElementById("barHome");
 const barDraw = document.getElementById("barDraw");
@@ -85,6 +95,33 @@ function animateValue(element, from, to, duration, formatter) {
 function setLoading(loading) {
   predictBtn.classList.toggle("loading", loading);
   predictBtn.disabled = loading;
+}
+
+function renderForm(el, form) {
+  if (!el) return;
+  el.innerHTML = "";
+  if (!form || !form.length) return;
+  form.forEach(result => {
+    const dot = document.createElement("span");
+    dot.className = `form-dot form-${result}`;
+    dot.title = result === "W" ? "Win" : result === "D" ? "Draw" : "Loss";
+    el.appendChild(dot);
+  });
+}
+
+function renderH2H(data) {
+  if (!data || data.total === 0) { h2hSection.style.display = "none"; return; }
+  h2hSection.style.display = "";
+  h2hTitle.textContent = `Last ${data.total} head-to-head`;
+  h2hHomeCount.textContent = data.home_wins;
+  h2hAwayCount.textContent = data.away_wins;
+  const t = data.total;
+  requestAnimationFrame(() => {
+    h2hFillHome.style.width = `${(data.home_wins / t * 100).toFixed(1)}%`;
+    h2hFillDraw.style.width = `${(data.draws / t * 100).toFixed(1)}%`;
+    h2hFillAway.style.width = `${(data.away_wins / t * 100).toFixed(1)}%`;
+  });
+  h2hSub.textContent = `${data.draws} draw${data.draws !== 1 ? "s" : ""}`;
 }
 
 function applyFixtureFromQuery() {
@@ -267,9 +304,17 @@ predictBtn.addEventListener("click", async () => {
 
   try {
     const params = new URLSearchParams({ home: homeTeam, away: awayTeam });
-    const response = await fetch(`${API_BASE}/predict?${params}`);
-    if (!response.ok) throw new Error("Prediction failed");
-    const data = await response.json();
+
+    const safeJson = async (url) => {
+      try { const r = await fetch(url); return r.ok ? r.json() : null; } catch { return null; }
+    };
+
+    const [data, homeFormData, awayFormData, h2hData] = await Promise.all([
+      fetch(`${API_BASE}/predict?${params}`).then(r => { if (!r.ok) throw new Error("Prediction failed"); return r.json(); }),
+      safeJson(`${API_BASE}/form?team=${encodeURIComponent(homeTeam)}&n=5`),
+      safeJson(`${API_BASE}/form?team=${encodeURIComponent(awayTeam)}&n=5`),
+      safeJson(`${API_BASE}/h2h?home=${encodeURIComponent(homeTeam)}&away=${encodeURIComponent(awayTeam)}&n=10`),
+    ]);
 
     // Probability boxes with count-up
     const ANIM = 550;
@@ -297,6 +342,13 @@ predictBtn.addEventListener("click", async () => {
     // Elo ratings
     if (data.r_home) homeEloEl.textContent = `Elo ${Math.round(data.r_home)}`;
     if (data.r_away) awayEloEl.textContent = `Elo ${Math.round(data.r_away)}`;
+
+    // Form dots
+    renderForm(homeFormEl, homeFormData?.form);
+    renderForm(awayFormEl, awayFormData?.form);
+
+    // H2H bar
+    renderH2H(h2hData);
 
     // Scoreline pills
     scorelinesPills.innerHTML = "";

@@ -8,3 +8,20 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: REFRESH_SECRET
+        generateValue: true   # auto-generated; copy from Render dashboard to use /refresh
+      - key: FOOTBALL_DATA_API_KEY
+        sync: false           # set manually in Render dashboard for fixtures page
+
+  # Weekly cron: re-fetch the current season's results and rebuild the model.
+  # Requires a paid Render plan ($1/month for cron jobs).
+  - type: cron
+    name: epl-weekly-refresh
+    runtime: python
+    plan: starter
+    schedule: "0 5 * * 1"   # Every Monday at 05:00 UTC
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/fetch_latest_results.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9

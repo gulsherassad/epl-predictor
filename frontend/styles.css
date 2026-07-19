@@ -761,6 +761,104 @@ button.loading .btn-text {
   font-weight: 700;
 }
 
+/* ── Form dots ───────────────────────────────────────────── */
+.team-form {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+  margin-top: 7px;
+  min-height: 18px;
+}
+
+.form-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: 0;
+}
+
+.form-W { background: #16a34a; }
+.form-D { background: rgba(255, 255, 255, 0.22); color: rgba(255, 255, 255, 0.8); }
+.form-L { background: #dc2626; }
+
+/* ── Head-to-head section ────────────────────────────────── */
+.h2h-section {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.h2h-title {
+  margin: 0 0 10px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 700;
+  text-align: center;
+}
+
+.h2h-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.h2h-count {
+  font-size: 22px;
+  font-weight: 800;
+  min-width: 28px;
+  letter-spacing: -0.03em;
+}
+
+.h2h-count-home { color: var(--accent); text-align: right; }
+.h2h-count-away { color: #f87171; }
+
+.h2h-bar-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.h2h-fill-home {
+  background: var(--accent);
+  height: 100%;
+  width: 0%;
+  transition: width 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.h2h-fill-draw {
+  background: rgba(255, 255, 255, 0.25);
+  height: 100%;
+  width: 0%;
+  transition: width 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.h2h-fill-away {
+  background: #f87171;
+  height: 100%;
+  width: 0%;
+  transition: width 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.h2h-sub {
+  margin: 7px 0 0;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 /* ── Fixtures page ───────────────────────────────────────── */
 .fixtures-page {
   max-width: 1100px;
