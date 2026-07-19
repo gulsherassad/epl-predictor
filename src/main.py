@@ -31,6 +31,8 @@ async def _auto_refresh() -> None:
         await loop.run_in_executor(None, rebuild_parquet)
         if hasattr(get_state, "_cache"):
             del get_state._cache
+        from src.api.routes import _PREDICT_CACHE
+        _PREDICT_CACHE.clear()
         logger.info("Auto-refresh complete.")
     except Exception as exc:
         logger.warning("Auto-refresh failed: %s", exc)
@@ -40,7 +42,18 @@ async def _auto_refresh() -> None:
 async def lifespan(app: FastAPI):
     analytics.init()
 
-    # On startup, trigger a background data refresh if training data is stale
+    from src.api.routes import get_state
+
+    # Pre-warm the model so the first real request is fast
+    loop = asyncio.get_event_loop()
+    try:
+        logger.info("Pre-warming model state…")
+        await loop.run_in_executor(None, get_state)
+        logger.info("Model state ready.")
+    except Exception as exc:
+        logger.warning("Model pre-warm failed: %s", exc)
+
+    # Trigger a background data refresh if training data is stale
     parquet = Path(__file__).resolve().parents[1] / "data" / "processed" / "matches.parquet"
     if parquet.exists():
         df = pd.read_parquet(parquet, columns=["Date"])

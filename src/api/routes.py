@@ -22,8 +22,9 @@ from src.models.poisson import PoissonGoalsModel
 
 router = APIRouter()
 
-# ── Fixtures config ──────────────────────────────────────────────────────────
+# ── Caches ───────────────────────────────────────────────────────────────────
 _FIXTURES_CACHE: dict = {"data": None, "expires": 0.0}
+_PREDICT_CACHE: dict[tuple[str, str], dict] = {}
 
 # Maps football-data.org shortName / name variants → model team names
 _FD_TEAM_MAP = {
@@ -234,6 +235,11 @@ def predict(
     state = get_state()
     home, away = validate_teams(home, away, state["teams"])
 
+    cache_key = (home, away)
+    if cache_key in _PREDICT_CACHE:
+        background.add_task(analytics.record, "predict", home=home, away=away, visitor=visitor_from_request(request))
+        return _PREDICT_CACHE[cache_key]
+
     r_home = float(state["ratings"].get(home, START_RATING))
     r_away = float(state["ratings"].get(away, START_RATING))
 
@@ -256,15 +262,7 @@ def predict(
         poisson_away=poisson_pred.p_away,
     )
 
-    background.add_task(
-        analytics.record,
-        "predict",
-        home=home,
-        away=away,
-        visitor=visitor_from_request(request),
-    )
-
-    return {
+    result = {
         "home": home,
         "away": away,
         "p_home": float(p_home),
@@ -276,6 +274,10 @@ def predict(
         "xg_away": float(poisson_pred.xg_away),
         "top_scorelines": poisson_pred.top_scorelines,
     }
+    _PREDICT_CACHE[cache_key] = result
+
+    background.add_task(analytics.record, "predict", home=home, away=away, visitor=visitor_from_request(request))
+    return result
 
 
 @router.get("/backtest/summary", response_model=BacktestSummaryResponse)
@@ -350,6 +352,7 @@ def refresh_data(x_refresh_token: str | None = Header(None)):
 
     if hasattr(get_state, "_cache"):
         del get_state._cache
+    _PREDICT_CACHE.clear()
 
     return {
         "status": "ok",
