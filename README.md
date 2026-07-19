@@ -45,7 +45,7 @@ The combined model sits at betting-market level, which is the realistic ceiling 
 
 ## Tech Stack
 
-- **Python 3.13** — data pipeline, models, API
+- **Python 3.11** — data pipeline, models, API
 - **FastAPI + Uvicorn** — prediction API and static file serving
 - **scikit-learn** — Poisson regression with one-hot + form feature pipeline
 - **pandas / pyarrow** — data processing and parquet storage
@@ -61,11 +61,13 @@ epl_predictor/
 ├── src/
 │   ├── main.py                  # FastAPI app entry point
 │   ├── api/
-│   │   ├── routes.py            # All prediction endpoints
+│   │   ├── routes.py            # All prediction and fixtures endpoints
 │   │   └── schemas.py           # Pydantic response models
 │   ├── models/
 │   │   ├── elo.py               # Elo rating math (pure functions)
 │   │   └── poisson.py           # Poisson model + rolling form features
+│   ├── data/
+│   │   └── updater.py           # Auto-fetch season CSVs and rebuild parquet
 │   ├── data_pipeline/
 │   │   ├── load_raw.py          # Merge raw season CSVs
 │   │   ├── clean_matches.py     # Clean and validate match data
@@ -80,11 +82,14 @@ epl_predictor/
 │   └── processed/               # Parquet files and backtest summaries
 ├── frontend/
 │   ├── index.html               # Prediction UI
-│   ├── fixtures.html            # Upcoming fixtures page
-│   ├── app.js                   # Frontend logic
-│   ├── styles.css               # Styles
+│   ├── fixtures.html            # Upcoming fixtures + inline predictions
+│   ├── app.js                   # Predictor page logic
+│   ├── fixtures.js              # Fixtures page logic
+│   ├── styles.css               # Shared styles
+│   ├── fixtures.css             # Fixtures page styles
 │   └── badges/                  # Team badge images
 ├── scripts/
+│   ├── fetch_latest_results.py  # CLI to refresh current season data
 │   ├── combine_raw_seasons.py   # Merge raw data
 │   ├── build_team_strengths.py  # Build team strength JSON
 │   └── build_fixtures_json.py   # Extract upcoming fixtures
@@ -148,8 +153,11 @@ pytest tests/ -v
 | `/teams` | GET | List all teams in the dataset |
 | `/predict?home=X&away=Y` | GET | Combined Elo + Poisson prediction |
 | `/predict/score?home=X&away=Y` | GET | Poisson-only xG and scoreline probabilities |
+| `/fixtures` | GET | Upcoming fixtures for the current season |
+| `/form?team=X&n=5` | GET | Last N results for a team (W/D/L) |
+| `/h2h?home=X&away=Y&n=10` | GET | Head-to-head record between two teams |
 | `/backtest/summary` | GET | Model evaluation metrics |
-| `/model/config` | GET | Active model hyperparameters |
+| `/refresh` | POST | Re-fetch latest season data and rebuild model (token-protected) |
 
 **Example — predict Arsenal vs Chelsea:**
 
@@ -182,11 +190,12 @@ curl "https://epl-predictor-xmqs.onrender.com/predict?home=Arsenal&away=Chelsea"
 
 Match data sourced from [football-data.co.uk](https://www.football-data.co.uk/englandm.php), covering five Premier League seasons (2021/22 – 2025/26). Each row is one completed match with final score and result.
 
+The server auto-refreshes training data on startup if the dataset is more than 7 days old, and a weekly cron job keeps it current throughout the season.
+
 ---
 
 ## Potential Extensions
 
-- Live fixture predictions via scheduled data refresh
 - Bookmaker odds comparison and value bet identification
 - xG-based Poisson model (replace goals with shot quality data)
 - Squad-level features (injuries, suspensions)
