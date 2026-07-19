@@ -2,8 +2,9 @@ import json
 from pathlib import Path
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
 
+from src import analytics
 from src.api.schemas import (
     BacktestSummaryResponse,
     HealthResponse,
@@ -40,6 +41,12 @@ def load_matches() -> pd.DataFrame:
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.sort_values("Date").reset_index(drop=True)
     return df
+
+
+def season_label(date: pd.Timestamp) -> str:
+    """A season runs Aug-May, so months before August belong to the prior year."""
+    start_year = date.year if date.month >= 8 else date.year - 1
+    return f"{start_year}/{str(start_year + 1)[-2:]}"
 
 
 def compute_current_ratings(df: pd.DataFrame) -> dict:
@@ -92,6 +99,13 @@ def validate_teams(home: str, away: str, teams: list[str]) -> tuple[str, str]:
     return home, away
 
 
+def visitor_from_request(request: Request) -> str | None:
+    """Behind Render's proxy the real client IP is in x-forwarded-for."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    ip = forwarded.split(",")[0].strip() or None
+    return analytics.visitor_id(ip, request.headers.get("user-agent"))
+
+
 def combine_probs(
     elo_home: float,
     elo_draw: float,
@@ -119,12 +133,15 @@ def get_state() -> dict:
         ratings = compute_current_ratings(df)
         pred_rows = load_elo_predictions_rows()
         poisson_model = PoissonGoalsModel().fit(df)
+        seasons = sorted({season_label(d) for d in df["Date"]})
 
         get_state._cache = {
             "teams": teams,
             "ratings": ratings,
             "pred_rows": pred_rows,
             "poisson_model": poisson_model,
+            "seasons": seasons,
+            "match_count": len(df),
         }
     return get_state._cache
 
@@ -157,6 +174,8 @@ def teams():
 
 @router.get("/predict", response_model=PredictResponse)
 def predict(
+    request: Request,
+    background: BackgroundTasks,
     home: str = Query(...),
     away: str = Query(...),
 ):
@@ -183,6 +202,14 @@ def predict(
         poisson_home=poisson_pred.p_home,
         poisson_draw=poisson_pred.p_draw,
         poisson_away=poisson_pred.p_away,
+    )
+
+    background.add_task(
+        analytics.record,
+        "predict",
+        home=home,
+        away=away,
+        visitor=visitor_from_request(request),
     )
 
     return {
@@ -245,13 +272,17 @@ def model_config():
         "k": K,
         "home_adv": HOME_ADV,
         "draw_prob": DRAW_PROB,
-        "seasons_in_dataset": 4,
-        "matches_in_dataset": len(pred_rows) if pred_rows else None,
+        "seasons_in_dataset": len(state["seasons"]),
+        "seasons": state["seasons"],
+        "matches_in_dataset": state["match_count"],
+        "matches_backtested": len(pred_rows) if pred_rows else None,
     }
 
 
 @router.get("/predict/score", response_model=PredictScoreResponse)
 def predict_score(
+    request: Request,
+    background: BackgroundTasks,
     home: str = Query(..., description="Home team name"),
     away: str = Query(..., description="Away team name"),
     max_goals: int = Query(6, ge=0, le=10),
@@ -261,6 +292,14 @@ def predict_score(
 
     model: PoissonGoalsModel = state["poisson_model"]
     pred = model.predict(home, away, max_goals=max_goals, top_n=5)
+
+    background.add_task(
+        analytics.record,
+        "predict_score",
+        home=home,
+        away=away,
+        visitor=visitor_from_request(request),
+    )
 
     return {
         "home": pred.home,
@@ -272,3 +311,11 @@ def predict_score(
         "p_away": float(pred.p_away),
         "top_scorelines": pred.top_scorelines,
     }
+
+
+@router.get("/stats")
+def stats():
+    try:
+        return analytics.summary()
+    except Exception:
+        return {"enabled": False, "error": "stats unavailable"}
