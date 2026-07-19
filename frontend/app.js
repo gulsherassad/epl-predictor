@@ -144,31 +144,32 @@ function applyFixtureFromQuery() {
   updateTeamNames();
 }
 
+function populateTeamSelects(teams) {
+  homeTeamSelect.innerHTML = '<option value="">Select home team</option>';
+  awayTeamSelect.innerHTML = '<option value="">Select away team</option>';
+  teams.forEach((team) => {
+    const o1 = document.createElement("option");
+    o1.value = o1.textContent = team;
+    const o2 = document.createElement("option");
+    o2.value = o2.textContent = team;
+    homeTeamSelect.appendChild(o1);
+    awayTeamSelect.appendChild(o2);
+  });
+  applyFixtureFromQuery();
+}
+
 async function loadTeams() {
   try {
     errorMessage.textContent = "";
+    if (window.TEAMS && window.TEAMS.length) {
+      populateTeamSelects(window.TEAMS);
+      return;
+    }
     const response = await fetch("/teams");
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (!data.teams || !Array.isArray(data.teams)) throw new Error("teams array missing");
-
-    homeTeamSelect.innerHTML = '<option value="">Select home team</option>';
-    awayTeamSelect.innerHTML = '<option value="">Select away team</option>';
-
-    data.teams.forEach((team) => {
-      const homeOption = document.createElement("option");
-      homeOption.value = team;
-      homeOption.textContent = team;
-
-      const awayOption = document.createElement("option");
-      awayOption.value = team;
-      awayOption.textContent = team;
-
-      homeTeamSelect.appendChild(homeOption);
-      awayTeamSelect.appendChild(awayOption);
-    });
-
-    applyFixtureFromQuery();
+    populateTeamSelects(data.teams);
   } catch (error) {
     errorMessage.textContent = `Could not load teams: ${error.message}`;
   }

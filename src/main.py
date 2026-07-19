@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -79,7 +80,15 @@ app.include_router(router)
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
-    return (_FRONTEND / "index.html").read_text(encoding="utf-8")
+    from src.api.routes import get_state
+    html = (_FRONTEND / "index.html").read_text(encoding="utf-8")
+    try:
+        teams = get_state()["teams"]
+        snippet = f"<script>window.TEAMS={json.dumps(teams)};</script>"
+        html = html.replace("</head>", f"{snippet}</head>", 1)
+    except Exception:
+        pass
+    return html
 
 
 @app.get("/fixtures-page", response_class=HTMLResponse)
