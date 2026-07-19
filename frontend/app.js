@@ -77,7 +77,10 @@ const TEAM_BADGES = {
   "West Ham": "/static/badges/westham.png",
   "West Ham United": "/static/badges/westham.png",
   "Wolves": "/static/badges/wolves.png",
-  "Wolverhampton Wanderers": "/static/badges/wolves.png"
+  "Wolverhampton Wanderers": "/static/badges/wolves.png",
+  "Sunderland": "/static/badges/sunderland.png",
+  "Hull City": "/static/badges/hull.png",
+  "Coventry City": "/static/badges/coventry.png",
 };
 
 function animateValue(element, from, to, duration, formatter) {
