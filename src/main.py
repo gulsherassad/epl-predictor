@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 from fastapi import FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -54,6 +55,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="EPL Predictor", version="1.0.0", lifespan=lifespan)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 _BASE = Path(__file__).resolve().parent.parent
 _FRONTEND = _BASE / "frontend"
