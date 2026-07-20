@@ -83,7 +83,8 @@ async def home():
     from src.api.routes import get_state
     html = (_FRONTEND / "index.html").read_text(encoding="utf-8")
     try:
-        teams = get_state()["teams"]
+        from src.api.routes import _CURRENT_SEASON_TEAMS
+        teams = sorted(set(get_state()["teams"]) | set(_CURRENT_SEASON_TEAMS))
         snippet = f"<script>window.TEAMS={json.dumps(teams)};</script>"
         html = html.replace("</head>", f"{snippet}</head>", 1)
     except Exception:

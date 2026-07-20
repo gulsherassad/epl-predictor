@@ -76,6 +76,9 @@ _FD_TEAM_MAP = {
     "Wolverhampton Wanderers": "Wolves",
 }
 
+# Teams in the current season that may not be in historical training data
+_CURRENT_SEASON_TEAMS = ["Coventry City", "Hull City"]
+
 START_RATING = 1500.0
 K = 40.0
 HOME_ADV = 65.0
@@ -260,7 +263,8 @@ def _compute_prediction(home: str, away: str, state: dict) -> dict:
 @router.get("/teams", response_model=TeamsResponse)
 def teams():
     state = get_state()
-    return {"teams": state["teams"]}
+    all_teams = sorted(set(state["teams"]) | set(_CURRENT_SEASON_TEAMS))
+    return {"teams": all_teams}
 
 
 @router.get("/predict", response_model=PredictResponse)
