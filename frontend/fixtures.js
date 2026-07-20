@@ -102,9 +102,11 @@ async function renderMatchday(matchday) {
   fixtures.forEach(f => {
     const card = document.createElement("div");
     card.className = "fixture-card";
+    const predictUrl = `/?home=${encodeURIComponent(f.home_team)}&away=${encodeURIComponent(f.away_team)}`;
     card.innerHTML = `
       <div class="fixture-meta">
         <span class="fixture-date-time">${f.date} · ${f.time}</span>
+        <a class="fixture-deep-link" href="${predictUrl}" title="Open in predictor">Predict →</a>
       </div>
       <div class="fixture-teams">
         <div class="fixture-team">

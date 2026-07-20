@@ -96,6 +96,18 @@
   color: var(--muted);
 }
 
+.fixture-deep-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+.fixture-deep-link:hover {
+  opacity: 1;
+}
+
 /* ── Teams row ───────────────────────────────────────────── */
 .fixture-teams {
   display: grid;
