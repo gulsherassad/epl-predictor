@@ -99,12 +99,9 @@
 .fixture-deep-link {
   font-size: 12px;
   font-weight: 600;
-  color: #fff;
-  background: #111;
+  color: #000;
   text-decoration: none;
-  padding: 3px 10px;
-  border-radius: 6px;
-  opacity: 0.85;
+  opacity: 0.7;
   transition: opacity 0.15s;
 }
 .fixture-deep-link:hover {

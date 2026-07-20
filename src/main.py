@@ -54,6 +54,18 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Model pre-warm failed: %s", exc)
 
+    # Pre-warm the fixtures cache in the background so the fixtures page loads instantly
+    async def _warm_fixtures():
+        from src.api.routes import fixtures as fetch_fixtures
+        try:
+            logger.info("Pre-warming fixtures cache…")
+            await loop.run_in_executor(None, fetch_fixtures)
+            logger.info("Fixtures cache ready.")
+        except Exception as exc:
+            logger.warning("Fixtures pre-warm failed: %s", exc)
+
+    asyncio.create_task(_warm_fixtures())
+
     # Trigger a background data refresh if training data is stale
     parquet = Path(__file__).resolve().parents[1] / "data" / "processed" / "matches.parquet"
     if parquet.exists():
