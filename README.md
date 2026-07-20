@@ -194,6 +194,56 @@ The server auto-refreshes training data on startup if the dataset is more than 7
 
 ---
 
+## Development Log
+
+### Initial build
+
+The idea was simple — I wanted to be able to predict Premier League results using actual data rather than just vibes. I started with Elo ratings because they're clean and interpretable: every team starts at 1500, and ratings shift after each match based on what was expected vs what happened. That alone gave decent accuracy. The Poisson model came next to add scoreline-level detail — instead of just win/draw/loss, you get expected goals and a full probability distribution over every scoreline. I combined them 70/30 in favour of Elo because Elo is more stable over a season and Poisson adds the texture on top.
+
+The backtest was done walk-forward — the model never sees future matches when making a prediction, which is how it would actually work in real life. 54.9% accuracy across 1,420 matches, which sits right at betting market level. That's roughly the ceiling you can reach with historical scoreline data alone.
+
+Once the model was working I built a FastAPI backend to serve predictions and a basic frontend to interact with it. Got it deployed on Render and left it there for a while.
+
+---
+
+### July 2026 — Fixtures page, bug fixes, and performance
+
+This was probably the biggest single session of work on the project. I wanted to take it from a standalone predictor to something that actually shows the upcoming 2026-27 Premier League fixtures with predictions already attached to each game. Here's how that went.
+
+**Fixtures page**
+
+The first thing was getting fixture data. I registered for a free API key at [football-data.org](https://www.football-data.org) which gives you access to the full schedule. Built a `/fixtures` endpoint on the backend that fetches the 2026-27 schedule, and a new Fixtures page on the frontend that groups games by matchweek and loads inline predictions for each fixture in parallel. You can page through every matchweek and see home win %, draw %, away win %, xG, and the top expected scoreline for each game.
+
+**Team name mapping nightmare**
+
+The first real issue was that predictions were showing as unavailable for a bunch of teams. Turns out the football-data.org API returns short names like `Man United`, `Nottingham`, `Brighton Hove` — but the training data from football-data.co.uk uses a completely different set of names like `Man United`, `Nott'm Forest`, `Brighton`. I had a mapping dictionary that was supposed to bridge them, but it was mapping to long-form names like `Manchester United` and `Newcastle United` that don't exist anywhere in the model. Every prediction for those teams was hitting a 400 error. Fixed it by going through every API shortName and making sure it maps to the exact string that's in the parquet.
+
+**The Arsenal badge bug**
+
+Every team that didn't have a badge was showing the Arsenal crest. Took a second to figure out why — turns out `placeholder.png` was literally a copy of `arsenal.png`, same file, same 74KB. So any unknown team fell back to the placeholder, which just showed Arsenal. Replaced it with a neutral grey circle.
+
+**Promoted teams**
+
+Coventry City and Hull City are newly promoted and have never played in the Premier League in our dataset window, so they had no Elo rating and no Poisson parameters. The backend was rejecting them entirely with a 400 error. Fixed this by removing the strict team validation from the predict endpoint — the Elo model defaults to 1500 (league average) for unknown teams, and the Poisson model already has `handle_unknown="ignore"` on its encoder which falls back to league-average rates. They get a reasonable prediction now, just less precise than an established club.
+
+Also grabbed proper crests for Sunderland, Hull City, and Coventry City directly from the football-data.org API and added them to the badge directory.
+
+**Performance**
+
+The site was painfully slow. A few things contributed:
+
+- Badge images were enormous. Manchester United's badge was 2.3MB, Chelsea's was 1.2MB, Aston Villa was 711KB. Total badge weight across all clubs was over 8MB. Compressed everything down to 120×120px — total dropped to 479KB, a 15× reduction.
+- The model was being loaded lazily on the first prediction request, which meant the first person to use the site after a cold start was waiting for the parquet to load, Elo ratings to compute, and the Poisson model to fit. Moved that to server startup so it's ready before any requests come in.
+- Every prediction was being recomputed from scratch. Added an in-memory cache so each home/away pair is computed once and reused. The fixtures page loads 10 predictions at once — on a warm cache they're near-instant.
+- The team dropdowns were waiting for a `/teams` API response on page load. Fixed by injecting the teams list directly into the HTML when the server renders the page, so the dropdowns populate immediately with no extra round trip.
+- Added GZip middleware for API responses and JS/CSS.
+
+**Auto-updating data**
+
+The training data only covers up to the last match in the parquet, so as the 2026-27 season plays out the model would get stale. Set up three layers: the server checks data age on startup and triggers a background refresh if it's more than 7 days old, there's a token-protected `/refresh` endpoint you can call manually, and a weekly Render cron job runs every Monday morning to pull the latest results from football-data.co.uk and rebuild the parquet automatically.
+
+---
+
 ## Potential Extensions
 
 - Bookmaker odds comparison and value bet identification
