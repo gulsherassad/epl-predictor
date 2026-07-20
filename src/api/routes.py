@@ -225,6 +225,38 @@ def health():
     return {"status": "ok"}
 
 
+def _compute_prediction(home: str, away: str, state: dict) -> dict:
+    cache_key = (home, away)
+    if cache_key in _PREDICT_CACHE:
+        return _PREDICT_CACHE[cache_key]
+
+    r_home = float(state["ratings"].get(home, START_RATING))
+    r_away = float(state["ratings"].get(away, START_RATING))
+
+    elo_home, elo_draw, elo_away = predict_proba(
+        r_home=r_home, r_away=r_away, home_adv=HOME_ADV, draw_prob=DRAW_PROB,
+    )
+
+    model: PoissonGoalsModel = state["poisson_model"]
+    poisson_pred = model.predict(home, away, max_goals=6, top_n=5)
+
+    p_home, p_draw, p_away = combine_probs(
+        elo_home=elo_home, elo_draw=elo_draw, elo_away=elo_away,
+        poisson_home=poisson_pred.p_home, poisson_draw=poisson_pred.p_draw,
+        poisson_away=poisson_pred.p_away,
+    )
+
+    result = {
+        "home": home, "away": away,
+        "p_home": float(p_home), "p_draw": float(p_draw), "p_away": float(p_away),
+        "r_home": r_home, "r_away": r_away,
+        "xg_home": float(poisson_pred.xg_home), "xg_away": float(poisson_pred.xg_away),
+        "top_scorelines": poisson_pred.top_scorelines,
+    }
+    _PREDICT_CACHE[cache_key] = result
+    return result
+
+
 @router.get("/teams", response_model=TeamsResponse)
 def teams():
     state = get_state()
@@ -243,47 +275,7 @@ def predict(
     if home == away:
         raise HTTPException(status_code=400, detail="home and away must be different teams")
 
-    cache_key = (home, away)
-    if cache_key in _PREDICT_CACHE:
-        background.add_task(analytics.record, "predict", home=home, away=away, visitor=visitor_from_request(request))
-        return _PREDICT_CACHE[cache_key]
-
-    r_home = float(state["ratings"].get(home, START_RATING))
-    r_away = float(state["ratings"].get(away, START_RATING))
-
-    elo_home, elo_draw, elo_away = predict_proba(
-        r_home=r_home,
-        r_away=r_away,
-        home_adv=HOME_ADV,
-        draw_prob=DRAW_PROB,
-    )
-
-    model: PoissonGoalsModel = state["poisson_model"]
-    poisson_pred = model.predict(home, away, max_goals=6, top_n=5)
-
-    p_home, p_draw, p_away = combine_probs(
-        elo_home=elo_home,
-        elo_draw=elo_draw,
-        elo_away=elo_away,
-        poisson_home=poisson_pred.p_home,
-        poisson_draw=poisson_pred.p_draw,
-        poisson_away=poisson_pred.p_away,
-    )
-
-    result = {
-        "home": home,
-        "away": away,
-        "p_home": float(p_home),
-        "p_draw": float(p_draw),
-        "p_away": float(p_away),
-        "r_home": r_home,
-        "r_away": r_away,
-        "xg_home": float(poisson_pred.xg_home),
-        "xg_away": float(poisson_pred.xg_away),
-        "top_scorelines": poisson_pred.top_scorelines,
-    }
-    _PREDICT_CACHE[cache_key] = result
-
+    result = _compute_prediction(home, away, state)
     background.add_task(analytics.record, "predict", home=home, away=away, visitor=visitor_from_request(request))
     return result
 
@@ -406,6 +398,7 @@ def fixtures():
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Could not fetch fixtures: {e}")
 
+    state = get_state()
     result_fixtures = []
     for match in raw.get("matches", []):
         home_short = match["homeTeam"].get("shortName") or match["homeTeam"]["name"]
@@ -417,6 +410,11 @@ def fixtures():
         utc_str = match["utcDate"]
         dt = datetime.fromisoformat(utc_str.replace("Z", "+00:00"))
 
+        try:
+            pred = _compute_prediction(home, away, state)
+        except Exception:
+            pred = None
+
         result_fixtures.append({
             "matchday": match.get("matchday", 0),
             "date": dt.strftime("%a %d %b %Y"),
@@ -424,6 +422,7 @@ def fixtures():
             "utc_date": utc_str,
             "home_team": home,
             "away_team": away,
+            "prediction": pred,
         })
 
     result = {"fixtures": result_fixtures}

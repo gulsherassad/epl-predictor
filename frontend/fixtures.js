@@ -99,8 +99,7 @@ async function renderMatchday(matchday) {
   const fixtures = matchdays[matchday] || [];
   fixturesList.innerHTML = "";
 
-  // Build all cards with loading states first
-  const cards = fixtures.map(f => {
+  fixtures.forEach(f => {
     const card = document.createElement("div");
     card.className = "fixture-card";
     card.innerHTML = `
@@ -121,66 +120,56 @@ async function renderMatchday(matchday) {
         </div>
       </div>
       <div class="fixture-prediction">
-        <span class="fixture-pred-loading">Loading prediction…</span>
+        ${f.prediction ? renderPredictionHTML(f.prediction, f.home_team, f.away_team) : '<span class="fixture-pred-error">Prediction unavailable</span>'}
       </div>
     `;
     fixturesList.appendChild(card);
-    return { card, fixture: f };
   });
 
-  // Fetch predictions in parallel
-  await Promise.all(cards.map(({ card, fixture }) =>
-    fetchAndRenderPrediction(card, fixture.home_team, fixture.away_team)
-  ));
-}
-
-async function fetchAndRenderPrediction(card, home, away) {
-  const predEl = card.querySelector(".fixture-prediction");
-  try {
-    const params = new URLSearchParams({ home, away });
-    const res = await fetch(`/predict?${params}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const d = await res.json();
-
-    const pH = (d.p_home * 100).toFixed(1);
-    const pD = (d.p_draw * 100).toFixed(1);
-    const pA = (d.p_away * 100).toFixed(1);
-    const topScore = d.top_scorelines?.[0];
-    const scoreText = topScore
-      ? `${topScore.home_goals}–${topScore.away_goals} (${(topScore.prob * 100).toFixed(1)}%)`
-      : "—";
-
-    predEl.innerHTML = `
-      <div class="fixture-prob-row">
-        <span class="fixture-prob-home">${pH}%</span>
-        <div class="fixture-prob-bar">
-          <div class="fixture-bar-h" id="bh-${home}-${away}"></div>
-          <div class="fixture-bar-d" id="bd-${home}-${away}"></div>
-          <div class="fixture-bar-a" id="ba-${home}-${away}"></div>
-        </div>
-        <span class="fixture-prob-away">${pA}%</span>
-      </div>
-      <div class="fixture-pred-footer">
-        <span>Draw <strong>${pD}%</strong></span>
-        <span>·</span>
-        <span>xG <strong>${Number(d.xg_home).toFixed(2)}</strong> – <strong>${Number(d.xg_away).toFixed(2)}</strong></span>
-        <span>·</span>
-        <span>Top score: <strong>${scoreText}</strong></span>
-      </div>
-    `;
-
-    // Animate bars after DOM insertion
-    requestAnimationFrame(() => {
-      const bh = document.getElementById(`bh-${home}-${away}`);
-      const bd = document.getElementById(`bd-${home}-${away}`);
-      const ba = document.getElementById(`ba-${home}-${away}`);
+  // Animate bars after DOM insertion
+  requestAnimationFrame(() => {
+    fixtures.forEach(f => {
+      if (!f.prediction) return;
+      const pH = (f.prediction.p_home * 100).toFixed(1);
+      const pD = (f.prediction.p_draw * 100).toFixed(1);
+      const pA = (f.prediction.p_away * 100).toFixed(1);
+      const bh = document.getElementById(`bh-${f.home_team}-${f.away_team}`);
+      const bd = document.getElementById(`bd-${f.home_team}-${f.away_team}`);
+      const ba = document.getElementById(`ba-${f.home_team}-${f.away_team}`);
       if (bh) bh.style.width = `${pH}%`;
       if (bd) bd.style.width = `${pD}%`;
       if (ba) ba.style.width = `${pA}%`;
     });
-  } catch {
-    predEl.innerHTML = `<span class="fixture-pred-error">Prediction unavailable</span>`;
-  }
+  });
+}
+
+function renderPredictionHTML(d, home, away) {
+  const pH = (d.p_home * 100).toFixed(1);
+  const pD = (d.p_draw * 100).toFixed(1);
+  const pA = (d.p_away * 100).toFixed(1);
+  const topScore = d.top_scorelines?.[0];
+  const scoreText = topScore
+    ? `${topScore.home_goals}–${topScore.away_goals} (${(topScore.prob * 100).toFixed(1)}%)`
+    : "—";
+
+  return `
+    <div class="fixture-prob-row">
+      <span class="fixture-prob-home">${pH}%</span>
+      <div class="fixture-prob-bar">
+        <div class="fixture-bar-h" id="bh-${home}-${away}"></div>
+        <div class="fixture-bar-d" id="bd-${home}-${away}"></div>
+        <div class="fixture-bar-a" id="ba-${home}-${away}"></div>
+      </div>
+      <span class="fixture-prob-away">${pA}%</span>
+    </div>
+    <div class="fixture-pred-footer">
+      <span>Draw <strong>${pD}%</strong></span>
+      <span>·</span>
+      <span>xG <strong>${Number(d.xg_home).toFixed(2)}</strong> – <strong>${Number(d.xg_away).toFixed(2)}</strong></span>
+      <span>·</span>
+      <span>Top score: <strong>${scoreText}</strong></span>
+    </div>
+  `;
 }
 
 loadFixtures();
