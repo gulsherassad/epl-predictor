@@ -10,6 +10,7 @@ A football analytics application that forecasts Premier League match outcomes us
 
 ![EPL Predictor UI](docs/Predictor.png)
 ![EPL Predictor UI](docs/predictor_2.png)
+![Fixtures Page](docs/fixtures.png)
 
 ---
 
