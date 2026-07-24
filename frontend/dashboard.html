@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Model Comparison — EPL Predictor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css?v=4">
+  <link rel="stylesheet" href="/static/dashboard.css?v=1">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <a href="/" style="text-decoration:none;display:flex;align-items:center;gap:14px;color:inherit;">
+          <span class="brand-logo">PL</span>
+          <div>
+            <h1>Premier League Predictor</h1>
+            <p>Match Centre</p>
+          </div>
+        </a>
+      </div>
+      <nav class="topbar-nav">
+        <a href="/" class="nav-link">Predictor</a>
+        <a href="/fixtures-page" class="nav-link">Fixtures</a>
+        <a href="/dashboard" class="nav-link nav-link-active">Model Comparison</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div class="hero-text">
+        <p class="eyebrow">Model comparison</p>
+        <h2>Elo vs Poisson vs Combined</h2>
+        <p class="subtext" id="dashSubtext">Loading evaluation data…</p>
+      </div>
+    </section>
+
+    <p id="dashError" class="error-message"></p>
+
+    <section class="dash-stats" id="dashStats" aria-label="Model summary metrics"></section>
+
+    <section class="dash-panel">
+      <div class="dash-panel-head">
+        <div>
+          <h3>Accuracy over time</h3>
+          <p class="dash-panel-sub">1X2 accuracy in consecutive 100-match blocks, walk-forward.</p>
+        </div>
+        <div class="dash-controls">
+          <label for="seasonFilter">Season</label>
+          <select id="seasonFilter">
+            <option value="all">All seasons</option>
+          </select>
+          <button type="button" class="dash-table-toggle" data-target="rollingTableWrap">View as table</button>
+        </div>
+      </div>
+      <div id="rollingLegend" class="dash-legend"></div>
+      <div class="dash-chart-wrap">
+        <svg id="rollingChart" class="dash-chart" role="img" aria-label="Rolling accuracy per model over time"></svg>
+        <div id="rollingTooltip" class="dash-tooltip" hidden></div>
+      </div>
+      <div id="rollingTableWrap" class="dash-table-wrap" hidden></div>
+    </section>
+
+    <section class="dash-panel">
+      <div class="dash-panel-head">
+        <div>
+          <h3>Calibration</h3>
+          <p class="dash-panel-sub">Predicted probability of the model's favoured outcome vs. how often it actually happened. Closer to the diagonal is better-calibrated.</p>
+        </div>
+        <div class="dash-controls">
+          <button type="button" class="dash-table-toggle" data-target="calibrationTableWrap">View as table</button>
+        </div>
+      </div>
+      <div id="calibrationLegend" class="dash-legend"></div>
+      <div class="dash-chart-wrap">
+        <svg id="calibrationChart" class="dash-chart" role="img" aria-label="Calibration curve per model"></svg>
+        <div id="calibrationTooltip" class="dash-tooltip" hidden></div>
+      </div>
+      <div id="calibrationTableWrap" class="dash-table-wrap" hidden></div>
+    </section>
+
+    <section class="dash-panel">
+      <div class="dash-panel-head">
+        <div>
+          <h3>By season</h3>
+          <p class="dash-panel-sub">Same walk-forward evaluation, broken out per season.</p>
+        </div>
+      </div>
+      <div id="seasonTableWrap" class="dash-table-wrap"></div>
+    </section>
+
+    <p class="dash-footnote" id="dashFootnote"></p>
+  </main>
+
+  <script src="/static/dashboard.js?v=1"></script>
+</body>
+</html>

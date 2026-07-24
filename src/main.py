@@ -107,3 +107,8 @@ async def home():
 @app.get("/fixtures-page", response_class=HTMLResponse)
 async def fixtures_page():
     return (_FRONTEND / "fixtures.html").read_text(encoding="utf-8")
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page():
+    return (_FRONTEND / "dashboard.html").read_text(encoding="utf-8")
