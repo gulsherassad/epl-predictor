@@ -337,6 +337,19 @@ def model_config():
     }
 
 
+@router.get("/dashboard/data")
+def dashboard_data():
+    """Precomputed model-comparison data (see scripts/build_dashboard_data.py)."""
+    path = processed_path("dashboard_data.json")
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="dashboard_data.json missing — run scripts/build_dashboard_data.py",
+        )
+    with open(path, "r") as f:
+        return json.load(f)
+
+
 @router.post("/refresh")
 def refresh_data(x_refresh_token: str | None = Header(None)):
     """Fetch the current season's results, rebuild matches.parquet, clear model cache."""
