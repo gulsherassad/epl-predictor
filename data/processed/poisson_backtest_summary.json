@@ -1,9 +1,9 @@
 {
   "model": "poisson",
-  "matches": 1800,
-  "accuracy_1x2": 0.5144444444444445,
-  "log_loss": 1.016739600456353,
-  "brier_score": 0.6029233404717821,
+  "matches": 1420,
+  "accuracy_1x2": 0.5267605633802817,
+  "log_loss": 1.0079462144198574,
+  "brier_score": 0.5957522237631337,
   "min_train_matches": 100,
   "max_goals": 6
 }

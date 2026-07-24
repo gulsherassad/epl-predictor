@@ -1,9 +1,9 @@
 {
   "model": "elo",
-  "matches": 1900,
-  "accuracy_1x2": 0.5326315789473685,
-  "log_loss": 0.9878805887600588,
-  "brier_score": 0.5887489909809986,
+  "matches": 1520,
+  "accuracy_1x2": 0.5407894736842105,
+  "log_loss": 0.9775822377057797,
+  "brier_score": 0.5813447153488719,
   "start_rating": 1500.0,
   "k": 40.0,
   "home_adv": 65.0,

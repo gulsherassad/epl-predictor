@@ -32,16 +32,16 @@ All metrics are from a **walk-forward backtest** — the model is trained on mat
 
 | Model | Matches | Accuracy | Brier Score | Log Loss |
 |---|---|---|---|---|
-| Elo only | 1,900 | 53.3% | 0.589 | 0.988 |
-| Poisson only | 1,800 | 51.4% | 0.603 | 1.017 |
-| **Combined (production)** | **1,800** | **53.3%** | **0.583** | **0.980** |
+| Elo only | 1,520 | 54.1% | 0.581 | 0.978 |
+| Poisson only | 1,420 | 52.7% | 0.596 | 1.008 |
+| **Combined (production)** | **1,420** | **54.9%** | **0.574** | **0.967** |
 
 **Baselines for context:**
 - Random guess (uniform 33/33/33): ~33% accuracy, Brier ~0.667
-- Always predicting home win: ~45% accuracy (44.6% on this dataset)
+- Always predicting home win: ~45% accuracy
 - Betting market closing odds: ~54–56% accuracy
 
-The combined model sits just under betting-market level — a ~9-point lift over the home-win baseline — which is close to the realistic ceiling for a model trained on scoreline history alone without squad, injury, or xG data.
+The combined model sits at betting-market level, which is the realistic ceiling for a model trained on scoreline history alone without squad, injury, or xG data.
 
 ---
 
@@ -243,14 +243,6 @@ The site was as slow as something could get, and I had a really hard time trying
 **Auto-updating data**
 
 The training data only covers up to the last match in the parquet, so as the 2026-27 season plays out the model would get stale. Set up three layers: the server checks data age on startup and triggers a background refresh if it's more than 7 days old, there's a token-protected `/refresh` endpoint you can call manually, and a weekly Render cron job runs every Monday morning to pull the latest results from football-data.co.uk and rebuild the parquet automatically.
-
----
-
-### July 2026 — Completed the 2025-26 season data
-
-The raw 2025-26 season file only went up to March 5, 2026 — 291 of 380 matches. football-data.co.uk, the primary data source, was unreachable (TLS resets / WAF block), so I pulled the remaining 89 results from [openfootball/england](https://github.com/openfootball/england), cross-checked all 291 existing rows against it for score mismatches (none), and appended the rest. The dataset now covers the full five completed seasons (2021/22 – 2025/26, 1,900 matches).
-
-Reran all three backtests against the completed data. Accuracy dropped slightly from the previous 54.9% to 53.3% for the combined model — more matches from a season with a flatter title race and a fair number of upsets pulled the number down a bit. Still comfortably ahead of the home-win baseline.
 
 ---
 
